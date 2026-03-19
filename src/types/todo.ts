@@ -8,6 +8,7 @@ export interface Todo {
 export type FilterType = "all" | "active" | "completed";
 
 export type TodoAction =
+  | { type: "LOAD"; todos: Todo[] }
   | { type: "ADD"; text: string }
   | { type: "TOGGLE"; id: number }
   | { type: "DELETE"; id: number }

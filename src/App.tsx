@@ -1,5 +1,5 @@
-import TodoList from "./components/ToDoList";
+import TodoContainer from "./components/ToDoContainer";
 
 export default function App() {
-  return <TodoList />;
+  return <TodoContainer />;
 }
