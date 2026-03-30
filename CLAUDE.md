@@ -10,6 +10,8 @@ npm run dev      # Start dev server with hot reload
 npm run build    # TypeScript check + Vite production build
 npm run lint     # ESLint check
 npm run preview  # Preview production build locally
+npm test         # Run tests in watch mode
+npm run test:run # Run tests once
 ```
 
 ## Architecture
