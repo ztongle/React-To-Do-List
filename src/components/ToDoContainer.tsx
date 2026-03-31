@@ -1,38 +1,27 @@
-import React, { useState, startTransition, Suspense } from "react";
-import { useImmerReducer } from "use-immer";
+import React, { useState, useEffect, useCallback, startTransition, Suspense } from "react";
 import TodoHeader from "./TodoHeader";
 import TodoInput from "./TodoInput";
 import ProgressBar from "./ProgressBar";
 import FilterButtons from "./FilterButtons";
 import ActionButtons from "./ActionButtons";
-import { todoReducer } from "../reducer/todoReducer";
-import { initialState } from "../types/todo";
+import { useTodoStore } from "../store/todoStore";
 import type { FilterType, Todo } from "../types/todo";
 import ToDoList from "./ToDoList";
 
 const ToDoContainer: React.FC = () => {
-  const [state, dispatch] = useImmerReducer(todoReducer, initialState);
+  const { todos, addTodo, toggleTodo, deleteTodo, clearCompleted, undo, redo, history, future } = useTodoStore();
   const [inputText, setInputText] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
 
-  const addTodo = () => {
+  const canUndo = history.length > 1;
+  const canRedo = future.length > 0;
+
+  const handleAddTodo = () => {
     const trimmedText = inputText.trim();
     if (trimmedText) {
-      dispatch({ type: "ADD", text: trimmedText });
+      addTodo(trimmedText);
       setInputText("");
     }
-  };
-
-  const toggleTodo = (id: number) => {
-    dispatch({ type: "TOGGLE", id });
-  };
-
-  const deleteTodo = (id: number) => {
-    dispatch({ type: "DELETE", id });
-  };
-
-  const clearCompleted = () => {
-    dispatch({ type: "CLEAR_COMPLETED" });
   };
 
   const handleFilterChange = (newFilter: FilterType) => {
@@ -41,17 +30,34 @@ const ToDoContainer: React.FC = () => {
     });
   };
 
-  const filteredTodos = state.todos.filter((todo: Todo) => {
+  const filteredTodos = todos.filter((todo: Todo) => {
     if (filter === "active") return !todo.completed;
     if (filter === "completed") return todo.completed;
     return true;
   });
 
-  const completedCount = state.todos.filter((t: Todo) => t.completed).length;
-  const totalCount = state.todos.length;
+  const completedCount = todos.filter((t: Todo) => t.completed).length;
+  const totalCount = todos.length;
 
-  const canUndo = state.history.length > 1;
-  const canRedo = state.future.length > 0;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          if (canUndo) undo();
+        } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+          e.preventDefault();
+          if (canRedo) redo();
+        }
+      }
+    },
+    [canUndo, canRedo, undo, redo]
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4">
@@ -63,7 +69,7 @@ const ToDoContainer: React.FC = () => {
             <TodoInput
               value={inputText}
               onChange={setInputText}
-              onAdd={addTodo}
+              onAdd={handleAddTodo}
             />
 
             <ProgressBar completed={completedCount} total={totalCount} />
@@ -77,7 +83,6 @@ const ToDoContainer: React.FC = () => {
                 <ToDoList
                   filter={filter}
                   filteredTodos={filteredTodos}
-                  dispatch={dispatch}
                   toggleTodo={toggleTodo}
                   deleteTodo={deleteTodo}
                 />
@@ -88,8 +93,8 @@ const ToDoContainer: React.FC = () => {
               canUndo={canUndo}
               canRedo={canRedo}
               completedCount={completedCount}
-              onUndo={() => dispatch({ type: "UNDO" })}
-              onRedo={() => dispatch({ type: "REDO" })}
+              onUndo={undo}
+              onRedo={redo}
               onClearCompleted={clearCompleted}
             />
           </div>

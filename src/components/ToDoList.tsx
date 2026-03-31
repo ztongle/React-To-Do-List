@@ -1,25 +1,19 @@
-import { use, useEffect } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { List } from "react-window";
-import type { FilterType, Todo, TodoAction } from "../types/todo";
+import type { FilterType, Todo } from "../types/todo";
+import { useTodoStore } from "../store/todoStore";
 import ToDoItem from "./ToDoItem";
 interface ToDoListProps {
   filteredTodos: Todo[];
   filter: FilterType;
-  dispatch: React.Dispatch<TodoAction>;
   toggleTodo: (id: number) => void;
   deleteTodo: (id: number) => void;
 }
 
-let promise: Promise<Todo[]>;
-function fetchTodos() {
-  return (
-    promise ||
-    (promise = new Promise((resolve, reject) => {
-      fetch("/mockdata.json")
-        .then((res) => setTimeout(() => resolve(res.json()), 2000))
-        .catch(() => reject([]));
-    }))
-  );
+async function fetchTodos(): Promise<Todo[]> {
+  const res = await fetch("/mockdata.json");
+  return res.json();
 }
 
 export default function ToDoList({
@@ -27,13 +21,20 @@ export default function ToDoList({
   toggleTodo,
   deleteTodo,
   filter,
-  dispatch,
 }: ToDoListProps) {
-  const data = use(fetchTodos());
+  const loadTodos = useTodoStore((state) => state.loadTodos);
+
+  const { data } = useQuery({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+    staleTime: Infinity,
+  });
 
   useEffect(() => {
-    dispatch({ type: "LOAD", todos: data });
-  }, [data, dispatch]);
+    if (data) {
+      loadTodos(data);
+    }
+  }, [data, loadTodos]);
 
   const getEmptyMessage = () => {
     switch (filter) {
